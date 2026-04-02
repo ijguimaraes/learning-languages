@@ -1,0 +1,30 @@
+{
+  "scenarioName": "review-alternating",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "incorrect-next",
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/v1/movies/f1a2b3c4/practice/cards/card_7h8i9j0k/review",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .+"
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.selected_option_id"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "bodyFileName": "post-review-response.json"
+  }
+}

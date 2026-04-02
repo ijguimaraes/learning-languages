@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/v1/audio/output.mp3"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "audio/mpeg",
+      "Content-Length": "9632",
+      "Accept-Ranges": "bytes",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "bodyFileName": "output.mp3"
+  }
+}

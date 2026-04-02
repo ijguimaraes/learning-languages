@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/movies/d5e6f7g8/practice/next",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .+"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "bodyFileName": "get-practice-next-empty-response.json"
+  }
+}

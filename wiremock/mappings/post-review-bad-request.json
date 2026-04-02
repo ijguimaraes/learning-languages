@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/v1/movies/f1a2b3c4/practice/cards/card_7h8i9j0k/review",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .+"
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "doesNotMatch": ".*selected_option_id.*"
+      }
+    ]
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "jsonBody": {
+      "error": {
+        "code": "BAD_REQUEST",
+        "message": "Parâmetros inválidos ou ausentes na requisição.",
+        "details": {
+          "field": "selected_option_id",
+          "reason": "Campo obrigatório não informado."
+        }
+      }
+    }
+  }
+}

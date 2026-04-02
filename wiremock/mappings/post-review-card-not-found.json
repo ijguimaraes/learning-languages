@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/v1/movies/f1a2b3c4/practice/cards/(?!card_7h8i9j0k)[^/]+/review",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .+"
+      }
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "jsonBody": {
+      "error": {
+        "code": "CARD_NOT_FOUND",
+        "message": "O card informado não existe ou não pertence a este filme.",
+        "details": {
+          "movie_id": "f1a2b3c4"
+        }
+      }
+    }
+  }
+}

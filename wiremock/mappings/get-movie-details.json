@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/movies/f1a2b3c4",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .+"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "bodyFileName": "get-movie-details-response.json"
+  }
+}

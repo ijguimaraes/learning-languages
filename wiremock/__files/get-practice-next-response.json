@@ -1,0 +1,14 @@
+{
+  "card": {
+    "id": "card_7h8i9j0k",
+    "movie_id": "f1a2b3c4",
+    "audio_url": "http://192.168.1.19:8080/v1/audio/output.mp3",
+    "instruction": "Ouça o trecho e selecione a tradução correta.",
+    "options": [
+      { "id": "opt_a", "value": "Você acha que o ar que respira é real?" },
+      { "id": "opt_b", "value": "Infelizmente, ninguém pode ser informado sobre o que é Matrix." },
+      { "id": "opt_c", "value": "Você tomou a pílula errada." },
+      { "id": "opt_d", "value": "Eu sei que você está aqui, Neo." }
+    ]
+  }
+}

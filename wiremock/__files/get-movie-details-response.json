@@ -1,0 +1,10 @@
+{
+  "id": "f1a2b3c4",
+  "title": "Matrix",
+  "practice": {
+    "total_cards": 42,
+    "cards_due": 5,
+    "cards_reviewed": 30,
+    "next_review_at": "2025-03-21T09:00:00Z"
+  }
+}

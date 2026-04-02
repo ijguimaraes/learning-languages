@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/movies/(?!f1a2b3c4|d5e6f7g8)[^/]+",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .+"
+      }
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "transformers": ["response-template"],
+    "jsonBody": {
+      "error": {
+        "code": "MOVIE_NOT_FOUND",
+        "message": "O filme informado não foi encontrado."
+      }
+    }
+  }
+}

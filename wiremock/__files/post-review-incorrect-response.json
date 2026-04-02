@@ -1,0 +1,11 @@
+{
+  "card_id": "card_7h8i9j0k",
+  "selected_option": { "id": "opt_c", "value": "Você tomou a pílula errada." },
+  "correct": false,
+  "correct_option": { "id": "opt_b", "value": "Infelizmente, ninguém pode ser informado sobre o que é Matrix." },
+  "next_review_at": "2025-03-21T09:00:00Z",
+  "practice_summary": {
+    "cards_reviewed_today": 9,
+    "cards_due": 5
+  }
+}

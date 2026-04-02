@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/movies",
+    "headers": {
+      "Authorization": {
+        "absent": true
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    "jsonBody": {
+      "error": {
+        "code": "UNAUTHORIZED",
+        "message": "Token ausente, inválido ou expirado."
+      }
+    }
+  }
+}

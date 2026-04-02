@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "id": "f1a2b3c4",
+      "title": "Matrix",
+      "practice": {
+        "total_cards": 42,
+        "cards_due": 5
+      }
+    },
+    {
+      "id": "d5e6f7g8",
+      "title": "Interstellar",
+      "practice": {
+        "total_cards": 38,
+        "cards_due": 0
+      }
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_items": 2,
+    "total_pages": 1
+  }
+}
