@@ -18,6 +18,28 @@ Key endpoints:
 
 Auth: Bearer token. Standard error envelope: `{ "error": { "code", "message", "details" } }`.
 
+## Architecture
+
+- **Flutter app** (`app/`): mobile client using `http` + `audioplayers`
+- **Fastify backend** (`backend/`): Node.js REST API on port 3000
+- **PostgreSQL** via Docker Compose (`docker-compose.yml`): database `movielingo`
+- **WireMock** (`wiremock/`): mock server for integration testing
+
+### Backend structure
+- `backend/db/init/` — SQL migrations (run on first `docker compose up`)
+- `backend/db/connection.js` — pg Pool
+- `backend/db/queries/` — SQL query functions (movies, cards, progress, reviews)
+- `backend/services/` — business logic (maturity, training-window, spaced-repetition, card-selector)
+- `backend/routes/` — Fastify route handlers
+- `backend/plugins/auth.js` — Bearer token → user resolution from DB
+
+### Card scheduling algorithms
+1. **Training window**: fixed-size sliding window over movie cards. Advances when all cards reach maturity threshold (80/100). Graduated cards enter spaced repetition.
+2. **Spaced repetition (SM-2)**: intervals grow with correct answers. Quality score derived from response time (faster = higher quality).
+
+### Key tables
+`users`, `movies`, `cards`, `card_options` (language-keyed), `user_movie_progress` (window state), `user_card_progress` (maturity + SM-2), `user_card_reviews` (audit log)
+
 ## Status
 
-Pre-implementation — API spec only, no application code yet.
+Backend implemented with PostgreSQL. Two scheduling algorithms (training window + SM-2) in place. Flutter app sends `response_time_ms` on review submission.

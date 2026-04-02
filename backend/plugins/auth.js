@@ -12,7 +12,26 @@ async function authPlugin(fastify) {
           message: 'Token ausente, inválido ou expirado.',
         },
       });
+      return;
     }
+
+    const token = auth.slice(7);
+    const { rows } = await fastify.db.query(
+      'SELECT id, native_language, language_locked FROM users WHERE token = $1',
+      [token]
+    );
+
+    if (rows.length === 0) {
+      reply.code(401).send({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Token ausente, inválido ou expirado.',
+        },
+      });
+      return;
+    }
+
+    request.user = rows[0];
   });
 }
 

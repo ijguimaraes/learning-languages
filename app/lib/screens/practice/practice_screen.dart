@@ -35,13 +35,18 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
+  DateTime? _audioEndedAt;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
-        setState(() => _isPlaying = state == PlayerState.playing);
+        final playing = state == PlayerState.playing;
+        if (!playing && _isPlaying) {
+          _audioEndedAt = DateTime.now();
+        }
+        setState(() => _isPlaying = playing);
       }
     });
     _loadNextCard();
@@ -66,6 +71,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Future<void> _loadNextCard() async {
+    _audioEndedAt = null;
     setState(() => _state = _PracticeState.loading);
     try {
       final response =
@@ -95,12 +101,19 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Future<void> _submitAnswer(String optionId) async {
+    final now = DateTime.now();
+    int? responseTimeMs;
+    if (_audioEndedAt != null) {
+      responseTimeMs = now.difference(_audioEndedAt!).inMilliseconds;
+    }
+
     setState(() => _state = _PracticeState.submitting);
     try {
       final result = await widget.apiClient.submitReview(
         widget.movieId,
         _card!.id,
         optionId,
+        responseTimeMs: responseTimeMs,
       );
       setState(() {
         _reviewResult = result;

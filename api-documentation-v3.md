@@ -187,6 +187,7 @@ GET /movies/f1a2b3c4/practice/next
     "id": "card_7h8i9j0k",
     "movie_id": "f1a2b3c4",
     "audio_url": "https://cdn.exemplo.com/cards/f1a2b3c4/card_7h8i9j0k.mp3",
+    "value": "Unfortunately, no one can be told what the Matrix is.",
     "instruction": "Ouça o trecho e selecione a tradução correta.",
     "options": [
       { "id": "opt_a", "value": "Você acha que o ar que respira é real?" },
@@ -231,13 +232,15 @@ POST /movies/{movie_id}/practice/cards/{card_id}/review
 
 ```json
 {
-  "selected_option_id": "opt_b"
+  "selected_option_id": "opt_b",
+  "response_time_ms": 3200
 }
 ```
 
-| Campo                | Tipo     | Obrigatório | Descrição                            |
-|----------------------|----------|-------------|--------------------------------------|
-| `selected_option_id` | `string` | Sim         | ID da opção selecionada pelo usuário |
+| Campo                | Tipo      | Obrigatório | Descrição                                                        |
+|----------------------|-----------|-------------|------------------------------------------------------------------|
+| `selected_option_id` | `string`  | Sim         | ID da opção selecionada pelo usuário                             |
+| `response_time_ms`   | `integer` | Não         | Tempo em milissegundos entre o fim do áudio e a seleção da opção |
 
 #### Exemplo de Requisição
 
@@ -246,7 +249,8 @@ POST /movies/f1a2b3c4/practice/cards/card_7h8i9j0k/review
 Content-Type: application/json
 
 {
-  "selected_option_id": "opt_b"
+  "selected_option_id": "opt_b",
+  "response_time_ms": 3200
 }
 ```
 

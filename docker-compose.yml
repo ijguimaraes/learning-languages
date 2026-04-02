@@ -9,3 +9,23 @@ services:
     command:
       - "--verbose"
       - "--local-response-templating"
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: movielingo
+      POSTGRES_USER: movielingo
+      POSTGRES_PASSWORD: movielingo_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U movielingo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

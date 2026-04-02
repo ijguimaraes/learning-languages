@@ -102,15 +102,22 @@ class ApiClient {
   Future<ReviewResponse> submitReview(
     String movieId,
     String cardId,
-    String selectedOptionId,
-  ) async {
+    String selectedOptionId, {
+    int? responseTimeMs,
+  }) async {
     final uri =
         Uri.parse('$_baseUrl/movies/$movieId/practice/cards/$cardId/review');
-    _log('POST $uri body={selected_option_id: $selectedOptionId}');
+    final bodyMap = <String, dynamic>{
+      'selected_option_id': selectedOptionId,
+    };
+    if (responseTimeMs != null) {
+      bodyMap['response_time_ms'] = responseTimeMs;
+    }
+    _log('POST $uri body=$bodyMap');
     final response = await _client.post(
       uri,
       headers: _headers,
-      body: jsonEncode({'selected_option_id': selectedOptionId}),
+      body: jsonEncode(bodyMap),
     );
     final body = _handleResponse(response, uri);
     final result = ReviewResponse.fromJson(body);

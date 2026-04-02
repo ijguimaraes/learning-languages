@@ -14,7 +14,7 @@ void main() {
 
   setUp(() {
     apiClient = ApiClient(
-      baseUrl: 'http://192.168.1.19:8080/v1',
+      baseUrl: 'http://192.168.1.19:3000/v1',
       token: 'fake-token-for-wiremock',
     );
   });

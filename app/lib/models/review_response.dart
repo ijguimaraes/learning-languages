@@ -22,7 +22,7 @@ class ReviewResponse {
   final Option selectedOption;
   final bool correct;
   final Option correctOption;
-  final String nextReviewAt;
+  final String? nextReviewAt;
   final PracticeSummary practiceSummary;
 
   ReviewResponse({
@@ -30,7 +30,7 @@ class ReviewResponse {
     required this.selectedOption,
     required this.correct,
     required this.correctOption,
-    required this.nextReviewAt,
+    this.nextReviewAt,
     required this.practiceSummary,
   });
 
@@ -40,7 +40,7 @@ class ReviewResponse {
       selectedOption: Option.fromJson(json['selected_option'] as Map<String, dynamic>),
       correct: json['correct'] as bool,
       correctOption: Option.fromJson(json['correct_option'] as Map<String, dynamic>),
-      nextReviewAt: json['next_review_at'] as String,
+      nextReviewAt: json['next_review_at'] as String?,
       practiceSummary: PracticeSummary.fromJson(json['practice_summary'] as Map<String, dynamic>),
     );
   }
