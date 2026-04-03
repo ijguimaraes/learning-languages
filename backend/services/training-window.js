@@ -26,21 +26,21 @@ async function checkWindowAdvancement(db, userId, movieId) {
   const windowStart = movieProgress.window_start;
   const windowEnd = windowStart + movieProgress.window_size - 1;
 
-  // Get all card progresses within the current window
+  // Get all card progresses within the current window (via movie_cards)
   const cardProgressResult = await db.query(
-    `SELECT ucp.*, c.position FROM user_card_progress ucp
-     JOIN cards c ON c.id = ucp.card_id
+    `SELECT ucp.*, mc.position FROM user_card_progress ucp
+     JOIN movie_cards mc ON mc.card_id = ucp.card_id
      WHERE ucp.user_id = $1
-       AND c.movie_id = $2
-       AND c.position >= $3
-       AND c.position <= $4
+       AND mc.movie_id = $2
+       AND mc.position >= $3
+       AND mc.position <= $4
        AND ucp.in_training_window = TRUE`,
     [userId, movieId, windowStart, windowEnd]
   );
 
   // Count total cards in the window
   const totalCardsResult = await db.query(
-    'SELECT COUNT(*) FROM cards WHERE movie_id = $1 AND position >= $2 AND position <= $3',
+    'SELECT COUNT(*) FROM movie_cards WHERE movie_id = $1 AND position >= $2 AND position <= $3',
     [movieId, windowStart, windowEnd]
   );
   const totalCardsInWindow = parseInt(totalCardsResult.rows[0].count);
@@ -64,10 +64,10 @@ async function checkWindowAdvancement(db, userId, movieId) {
            repetition = 0,
            ease_factor = 2.50,
            interval_days = 1,
-           next_review_at = $3,
+           next_review_at = $2,
            updated_at = NOW()
        WHERE id = $1`,
-      [graduatingCard.id, userId, new Date(now.getTime() + oneDayMs)]
+      [graduatingCard.id, new Date(now.getTime() + oneDayMs)]
     );
   }
 

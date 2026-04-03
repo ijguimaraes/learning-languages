@@ -2,13 +2,14 @@ async function selectNextCard(db, userId, movieId, userLanguage) {
   // Ensure user_movie_progress exists (first practice on this movie)
   let movieProgress = await getOrCreateMovieProgress(db, userId, movieId);
 
-  // PRIORITY 1: Spaced repetition cards that are DUE
+  // PRIORITY 1: Spaced repetition cards that are DUE (for this movie)
   const srResult = await db.query(
-    `SELECT ucp.card_id, c.position, c.audio_url, c.value, c.instruction
+    `SELECT ucp.card_id, mc.position, c.audio_url, c.value, c.instruction
      FROM user_card_progress ucp
+     JOIN movie_cards mc ON mc.card_id = ucp.card_id
      JOIN cards c ON c.id = ucp.card_id
      WHERE ucp.user_id = $1
-       AND c.movie_id = $2
+       AND mc.movie_id = $2
        AND ucp.in_training_window = FALSE
        AND ucp.next_review_at <= NOW()
        AND c.audio_url IS NOT NULL
@@ -26,13 +27,14 @@ async function selectNextCard(db, userId, movieId, userLanguage) {
   const windowEnd = windowStart + movieProgress.window_size - 1;
 
   const trainingResult = await db.query(
-    `SELECT c.id AS card_id, c.position, c.audio_url, c.value, c.instruction,
+    `SELECT mc.card_id, mc.position, c.audio_url, c.value, c.instruction,
             ucp.id AS progress_id, COALESCE(ucp.training_maturity, 0) AS maturity
-     FROM cards c
-     LEFT JOIN user_card_progress ucp ON ucp.card_id = c.id AND ucp.user_id = $1
-     WHERE c.movie_id = $2
-       AND c.position >= $3
-       AND c.position <= $4
+     FROM movie_cards mc
+     JOIN cards c ON c.id = mc.card_id
+     LEFT JOIN user_card_progress ucp ON ucp.card_id = mc.card_id AND ucp.user_id = $1
+     WHERE mc.movie_id = $2
+       AND mc.position >= $3
+       AND mc.position <= $4
        AND (ucp.in_training_window = TRUE OR ucp.id IS NULL)
        AND c.audio_url IS NOT NULL
      ORDER BY
@@ -49,7 +51,8 @@ async function selectNextCard(db, userId, movieId, userLanguage) {
     if (!row.progress_id) {
       await db.query(
         `INSERT INTO user_card_progress (id, user_id, card_id, in_training_window)
-         VALUES (gen_random_uuid()::text, $1, $2, TRUE)`,
+         VALUES (gen_random_uuid()::text, $1, $2, TRUE)
+         ON CONFLICT (user_id, card_id) DO NOTHING`,
         [userId, row.card_id]
       );
     }
@@ -61,7 +64,7 @@ async function selectNextCard(db, userId, movieId, userLanguage) {
   const nextReviewResult = await db.query(
     `SELECT MIN(next_review_at) AS next_at FROM user_card_progress
      WHERE user_id = $1
-       AND card_id IN (SELECT id FROM cards WHERE movie_id = $2)
+       AND card_id IN (SELECT card_id FROM movie_cards WHERE movie_id = $2)
        AND in_training_window = FALSE`,
     [userId, movieId]
   );

@@ -11,31 +11,51 @@ INSERT INTO movies (id, title, original_language, genre, release_date, rating) V
     ('f1a2b3c4', 'Matrix',        'en', 'action',  '1999-03-31', 8.7),
     ('d5e6f7g8', 'Interstellar',  'en', 'sci-fi',  '2014-11-07', 8.6);
 
--- Cards for Matrix (10 cards, positions 1-10)
-INSERT INTO cards (id, movie_id, position, audio_url, value) VALUES
-    ('card_7h8i9j0k', 'f1a2b3c4', 1,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Unfortunately, no one can be told what the Matrix is.'),
-    ('card_matrix_02', 'f1a2b3c4', 2,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'I can only show you the door. You are the one that has to walk through it.'),
-    ('card_matrix_03', 'f1a2b3c4', 3,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Do not try and bend the spoon. That is impossible.'),
-    ('card_matrix_04', 'f1a2b3c4', 4,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Have you ever had a dream that you were so sure was real?'),
-    ('card_matrix_05', 'f1a2b3c4', 5,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Welcome to the desert of the real.'),
-    ('card_matrix_06', 'f1a2b3c4', 6,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'I know kung fu.'),
-    ('card_matrix_07', 'f1a2b3c4', 7,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Choice is an illusion created between those with power and those without.'),
-    ('card_matrix_08', 'f1a2b3c4', 8,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'The Matrix is the world that has been pulled over your eyes to blind you from the truth.'),
-    ('card_matrix_09', 'f1a2b3c4', 9,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'You are the One, Neo.'),
-    ('card_matrix_10', 'f1a2b3c4', 10, 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Free your mind.');
+-- Cards (independent of movies)
+INSERT INTO cards (id, audio_url, value) VALUES
+    ('card_7h8i9j0k', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Unfortunately, no one can be told what the Matrix is.'),
+    ('card_matrix_02', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'I can only show you the door. You are the one that has to walk through it.'),
+    ('card_matrix_03', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Do not try and bend the spoon. That is impossible.'),
+    ('card_matrix_04', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Have you ever had a dream that you were so sure was real?'),
+    ('card_matrix_05', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Welcome to the desert of the real.'),
+    ('card_matrix_06', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'I know kung fu.'),
+    ('card_matrix_07', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Choice is an illusion created between those with power and those without.'),
+    ('card_matrix_08', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'The Matrix is the world that has been pulled over your eyes to blind you from the truth.'),
+    ('card_matrix_09', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'You are the One, Neo.'),
+    ('card_matrix_10', 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Free your mind.'),
+    ('card_inter_01',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Mankind was born on Earth. It was never meant to die here.'),
+    ('card_inter_02',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Do not go gentle into that good night.'),
+    ('card_inter_03',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Love is the one thing that transcends time and space.'),
+    ('card_inter_04',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'We used to look up at the sky and wonder at our place in the stars.'),
+    ('card_inter_05',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'One hour there equals seven years back on Earth.'),
+    ('card_inter_06',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'I am coming back.'),
+    ('card_inter_07',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Gravity cannot be a choice.'),
+    ('card_inter_08',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Nature is not evil, but it is not good either.'),
+    ('card_inter_09',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'We were not meant to save the world. We were meant to find a new home.'),
+    ('card_inter_10',  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Rage, rage against the dying of the light.');
 
--- Cards for Interstellar (10 cards, positions 1-10)
-INSERT INTO cards (id, movie_id, position, audio_url, value) VALUES
-    ('card_inter_01', 'd5e6f7g8', 1,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Mankind was born on Earth. It was never meant to die here.'),
-    ('card_inter_02', 'd5e6f7g8', 2,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Do not go gentle into that good night.'),
-    ('card_inter_03', 'd5e6f7g8', 3,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Love is the one thing that transcends time and space.'),
-    ('card_inter_04', 'd5e6f7g8', 4,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'We used to look up at the sky and wonder at our place in the stars.'),
-    ('card_inter_05', 'd5e6f7g8', 5,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'One hour there equals seven years back on Earth.'),
-    ('card_inter_06', 'd5e6f7g8', 6,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'I am coming back.'),
-    ('card_inter_07', 'd5e6f7g8', 7,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Gravity cannot be a choice.'),
-    ('card_inter_08', 'd5e6f7g8', 8,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'Nature is not evil, but it is not good either.'),
-    ('card_inter_09', 'd5e6f7g8', 9,  'http://192.168.1.19:3000/v1/audio/output.mp3', 'We were not meant to save the world. We were meant to find a new home.'),
-    ('card_inter_10', 'd5e6f7g8', 10, 'http://192.168.1.19:3000/v1/audio/output.mp3', 'Rage, rage against the dying of the light.');
+-- Movie-card mappings (positions within each movie)
+INSERT INTO movie_cards (id, movie_id, card_id, position) VALUES
+    ('mc_m01', 'f1a2b3c4', 'card_7h8i9j0k', 1),
+    ('mc_m02', 'f1a2b3c4', 'card_matrix_02', 2),
+    ('mc_m03', 'f1a2b3c4', 'card_matrix_03', 3),
+    ('mc_m04', 'f1a2b3c4', 'card_matrix_04', 4),
+    ('mc_m05', 'f1a2b3c4', 'card_matrix_05', 5),
+    ('mc_m06', 'f1a2b3c4', 'card_matrix_06', 6),
+    ('mc_m07', 'f1a2b3c4', 'card_matrix_07', 7),
+    ('mc_m08', 'f1a2b3c4', 'card_matrix_08', 8),
+    ('mc_m09', 'f1a2b3c4', 'card_matrix_09', 9),
+    ('mc_m10', 'f1a2b3c4', 'card_matrix_10', 10),
+    ('mc_i01', 'd5e6f7g8', 'card_inter_01',  1),
+    ('mc_i02', 'd5e6f7g8', 'card_inter_02',  2),
+    ('mc_i03', 'd5e6f7g8', 'card_inter_03',  3),
+    ('mc_i04', 'd5e6f7g8', 'card_inter_04',  4),
+    ('mc_i05', 'd5e6f7g8', 'card_inter_05',  5),
+    ('mc_i06', 'd5e6f7g8', 'card_inter_06',  6),
+    ('mc_i07', 'd5e6f7g8', 'card_inter_07',  7),
+    ('mc_i08', 'd5e6f7g8', 'card_inter_08',  8),
+    ('mc_i09', 'd5e6f7g8', 'card_inter_09',  9),
+    ('mc_i10', 'd5e6f7g8', 'card_inter_10',  10);
 
 -- ============================================================
 -- Card options in Portuguese (pt) for Matrix cards

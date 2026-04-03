@@ -35,22 +35,30 @@ COMMENT ON COLUMN movies.rating IS 'Nota do filme (ex: 8.7). Usado para ordenaç
 
 CREATE TABLE cards (
     id          VARCHAR(64)  PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    movie_id    VARCHAR(64)  NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
-    position    INTEGER      NOT NULL,
     audio_url   VARCHAR(512),
     value       TEXT         NOT NULL,
     instruction VARCHAR(512) NOT NULL DEFAULT 'Ouça o trecho e selecione a tradução correta.',
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  cards IS 'Cards de prática — cada card é um trecho de fala que o usuário deve traduzir. Um card pode aparecer em vários filmes e mais de uma vez no mesmo filme';
+COMMENT ON COLUMN cards.audio_url IS 'URL do áudio da fala original. NULL enquanto o áudio não foi gerado; cards sem áudio não aparecem no app';
+COMMENT ON COLUMN cards.value IS 'Transcrição da fala no idioma original. Texto usado para gerar o áudio';
+COMMENT ON COLUMN cards.instruction IS 'Instrução exibida ao usuário no card';
+
+CREATE TABLE movie_cards (
+    id        VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    movie_id  VARCHAR(64) NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+    card_id   VARCHAR(64) NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    position  INTEGER     NOT NULL,
     UNIQUE(movie_id, position)
 );
 
-CREATE INDEX idx_cards_movie_position ON cards(movie_id, position);
+CREATE INDEX idx_movie_cards_movie_position ON movie_cards(movie_id, position);
+CREATE INDEX idx_movie_cards_card ON movie_cards(card_id);
 
-COMMENT ON TABLE  cards IS 'Cards de prática — cada card é um trecho de diálogo do filme que o usuário deve traduzir';
-COMMENT ON COLUMN cards.position IS 'Ordem sequencial do diálogo no filme (1, 2, 3...). Define a posição do card na janela de treino';
-COMMENT ON COLUMN cards.audio_url IS 'URL do áudio da fala original. NULL enquanto o áudio não foi gerado; cards sem áudio não aparecem no app';
-COMMENT ON COLUMN cards.value IS 'Transcrição da fala no idioma original do filme. Texto usado para gerar o áudio';
-COMMENT ON COLUMN cards.instruction IS 'Instrução exibida ao usuário no card';
+COMMENT ON TABLE  movie_cards IS 'Junção N:N entre filmes e cards. Um card pode aparecer em vários filmes e mais de uma vez no mesmo filme, em posições diferentes';
+COMMENT ON COLUMN movie_cards.position IS 'Posição deste card no diálogo do filme. Define a ordem na janela de treino';
 
 CREATE TABLE card_options (
     id            VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -83,7 +91,7 @@ CREATE TABLE user_movie_progress (
 );
 
 COMMENT ON TABLE  user_movie_progress IS 'Progresso do usuário por filme — controla a janela de treino. A janela avança 1 posição quando todos os cards dentro dela atingem maturidade suficiente';
-COMMENT ON COLUMN user_movie_progress.window_start IS 'Posição (cards.position) do primeiro card na janela atual';
+COMMENT ON COLUMN user_movie_progress.window_start IS 'Posição (movie_cards.position) do primeiro card na janela atual';
 COMMENT ON COLUMN user_movie_progress.window_size IS 'Quantidade de cards visíveis na janela (ex: 10 significa janela de window_start até window_start+9)';
 COMMENT ON COLUMN user_movie_progress.started_at IS 'Quando o usuário iniciou a prática neste filme';
 
@@ -105,7 +113,7 @@ CREATE TABLE user_card_progress (
 
 CREATE INDEX idx_ucp_user_next_review ON user_card_progress(user_id, next_review_at);
 
-COMMENT ON TABLE  user_card_progress IS 'Progresso do usuário por card — unifica janela de treino e repetição espaçada (SM-2). O campo in_training_window define qual algoritmo governa o card';
+COMMENT ON TABLE  user_card_progress IS 'Progresso do usuário por card — unifica janela de treino e repetição espaçada (SM-2). O progresso é global: se o usuário domina um card no filme A, ele já começa com essa maturidade no filme B';
 COMMENT ON COLUMN user_card_progress.in_training_window IS 'TRUE = card está na janela de treino (usa training_maturity); FALSE = card graduou para repetição espaçada (usa campos SM-2)';
 COMMENT ON COLUMN user_card_progress.training_maturity IS 'Maturidade de 0 a 100. Leva em conta acertos e tempo de resposta. Card gradua da janela ao atingir 80';
 COMMENT ON COLUMN user_card_progress.consecutive_correct IS 'Quantidade de acertos consecutivos. Reseta a zero em caso de erro';

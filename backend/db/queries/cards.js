@@ -1,6 +1,9 @@
 async function getCardByIdAndMovie(db, cardId, movieId) {
   const result = await db.query(
-    'SELECT * FROM cards WHERE id = $1 AND movie_id = $2',
+    `SELECT c.* FROM cards c
+     JOIN movie_cards mc ON mc.card_id = c.id
+     WHERE c.id = $1 AND mc.movie_id = $2
+     LIMIT 1`,
     [cardId, movieId]
   );
   return result.rows[0] || null;
