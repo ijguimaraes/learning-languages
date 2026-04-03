@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ingestion"
+version = "0.1.0"
+description = "SRT subtitle ingestion pipeline for MovieLingo"
+requires-python = ">=3.10"
+dependencies = [
+    "srt>=3.5",
+    "spacy>=3.7",
+    "psycopg2-binary>=2.9",
+    "click>=8.1",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+ingestion = "ingestion.cli:cli"

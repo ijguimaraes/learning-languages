@@ -1,0 +1,8 @@
+srt>=3.5
+spacy>=3.7
+psycopg2-binary>=2.9
+click>=8.1
+python-dotenv>=1.0
+
+[dev]
+pytest>=7.0
