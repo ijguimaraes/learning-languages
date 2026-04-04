@@ -1,11 +1,18 @@
 import click
 
 from . import pipeline
+from .tts import generate_all
 
 
 @click.group()
 def cli():
     """MovieLingo subtitle ingestion pipeline."""
+
+
+@cli.command("generate-audio")
+def generate_audio():
+    """Generate TTS audio for cards with NULL audio_url and upload to MinIO."""
+    generate_all()
 
 
 @cli.command()

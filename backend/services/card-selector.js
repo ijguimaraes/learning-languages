@@ -100,6 +100,13 @@ async function getOrCreateMovieProgress(db, userId, movieId) {
   return result.rows[0];
 }
 
+function buildAudioUrl(audioPath) {
+  if (!audioPath) return null;
+  if (audioPath.startsWith('http')) return audioPath;
+  const minioEndpoint = process.env.MINIO_ENDPOINT || 'localhost:9000';
+  return `http://${minioEndpoint}/${audioPath}`;
+}
+
 async function buildCardResponse(db, cardRow, userLanguage) {
   const optionsResult = await db.query(
     `SELECT id, value FROM card_options
@@ -108,14 +115,30 @@ async function buildCardResponse(db, cardRow, userLanguage) {
     [cardRow.card_id, userLanguage]
   );
 
+  let options = optionsResult.rows;
+
+  if (options.length === 0) {
+    const { generateAndSaveOptions } = require('./option-generator');
+
+    const sourceLangResult = await db.query(
+      `SELECT m.original_language FROM movies m
+       JOIN movie_cards mc ON mc.movie_id = m.id
+       WHERE mc.card_id = $1 LIMIT 1`,
+      [cardRow.card_id]
+    );
+    const sourceLang = sourceLangResult.rows[0]?.original_language || 'en';
+
+    options = await generateAndSaveOptions(db, cardRow.card_id, cardRow.value, sourceLang, userLanguage);
+  }
+
   return {
     card: {
       id: cardRow.card_id,
       movie_id: undefined, // set by the route
-      audio_url: cardRow.audio_url,
+      audio_url: buildAudioUrl(cardRow.audio_url),
       value: cardRow.value,
       instruction: cardRow.instruction,
-      options: optionsResult.rows.map(o => ({ id: o.id, value: o.value })),
+      options: options.map(o => ({ id: o.id, value: o.value })),
     },
   };
 }

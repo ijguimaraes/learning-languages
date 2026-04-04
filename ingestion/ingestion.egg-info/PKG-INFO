@@ -8,5 +8,8 @@ Requires-Dist: spacy>=3.7
 Requires-Dist: psycopg2-binary>=2.9
 Requires-Dist: click>=8.1
 Requires-Dist: python-dotenv>=1.0
+Requires-Dist: anthropic>=0.42
+Requires-Dist: gTTS>=2.5
+Requires-Dist: minio>=7.2
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
