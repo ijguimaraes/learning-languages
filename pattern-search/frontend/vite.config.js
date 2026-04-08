@@ -11,6 +11,7 @@ export default defineConfig({
       '/parse': 'http://localhost:8000',
       '/movies': 'http://localhost:8000',
       '/cards': 'http://localhost:8000',
+      '/patterns': 'http://localhost:8000',
     },
   },
 })

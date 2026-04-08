@@ -24,6 +24,15 @@ async def lifespan(app: FastAPI):
     global nlp, db_pool
     nlp = load_nlp("en_core_web_sm")
     db_pool = await asyncpg.create_pool(DATABASE_URL)
+    await db_pool.execute("""
+        CREATE TABLE IF NOT EXISTS search_patterns (
+            id         VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+            pattern    TEXT NOT NULL,
+            mode       VARCHAR(5) NOT NULL DEFAULT 'dep',
+            language   VARCHAR(5) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
     yield
     await db_pool.close()
 
@@ -110,8 +119,15 @@ async def dep_search(
 
 @app.get("/movies")
 async def list_movies():
-    rows = await db_pool.fetch("SELECT id, title FROM movies ORDER BY title")
-    return {"movies": [{"id": r["id"], "title": r["title"]} for r in rows]}
+    rows = await db_pool.fetch(
+        "SELECT id, title, original_language FROM movies ORDER BY title"
+    )
+    return {
+        "movies": [
+            {"id": r["id"], "title": r["title"], "language": r["original_language"]}
+            for r in rows
+        ]
+    }
 
 
 class CreateCardRequest(BaseModel):
@@ -148,3 +164,112 @@ async def create_card(req: CreateCardRequest):
             )
 
     return {"card_id": card_id, "position": pos}
+
+
+# --- Patterns CRUD ---
+
+
+class CreatePatternRequest(BaseModel):
+    pattern: str
+    mode: str
+    language: str
+
+
+@app.get("/patterns")
+async def list_patterns():
+    rows = await db_pool.fetch(
+        "SELECT id, pattern, mode, language, created_at FROM search_patterns ORDER BY created_at DESC"
+    )
+    return {
+        "patterns": [
+            {
+                "id": r["id"],
+                "pattern": r["pattern"],
+                "mode": r["mode"],
+                "language": r["language"],
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.post("/patterns")
+async def create_pattern(req: CreatePatternRequest):
+    if req.mode not in ("dep", "pos"):
+        raise HTTPException(status_code=400, detail="Mode must be 'dep' or 'pos'")
+    row = await db_pool.fetchrow(
+        "INSERT INTO search_patterns (pattern, mode, language) VALUES ($1, $2, $3) RETURNING id",
+        req.pattern,
+        req.mode,
+        req.language,
+    )
+    return {"id": row["id"], "pattern": req.pattern, "mode": req.mode, "language": req.language}
+
+
+@app.delete("/patterns/{pattern_id}")
+async def delete_pattern(pattern_id: str):
+    result = await db_pool.execute(
+        "DELETE FROM search_patterns WHERE id = $1", pattern_id
+    )
+    if result == "DELETE 0":
+        raise HTTPException(status_code=404, detail="Pattern not found")
+    return {"deleted": True}
+
+
+@app.post("/patterns/run")
+async def run_patterns(
+    file: UploadFile,
+    movie_id: str = Form(...),
+):
+    content = await _decode_srt(file)
+    sentences = parse_srt_text(content)
+
+    rows = await db_pool.fetch(
+        "SELECT pattern, mode FROM search_patterns"
+    )
+    if not rows:
+        return {"cards_created": 0, "cards": []}
+
+    all_matches = []
+    for row in rows:
+        pattern_labels = row["pattern"].strip().split()
+        mode = row["mode"]
+        matches = search(nlp, sentences, pattern_labels, mode=mode)
+        for m in matches:
+            value = " ".join(m.tokens)
+            all_matches.append(value)
+
+    # Deduplicate
+    unique_values = list(dict.fromkeys(all_matches))
+
+    created = []
+    async with db_pool.acquire() as conn:
+        async with conn.transaction():
+            movie = await conn.fetchrow(
+                "SELECT id FROM movies WHERE id = $1", movie_id
+            )
+            if not movie:
+                raise HTTPException(status_code=404, detail="Movie not found")
+
+            for value in unique_values:
+                card = await conn.fetchrow(
+                    "INSERT INTO cards (value) VALUES ($1) RETURNING id",
+                    value,
+                )
+                card_id = card["id"]
+
+                pos = await conn.fetchval(
+                    "SELECT COALESCE(MAX(position), 0) + 1 FROM movie_cards WHERE movie_id = $1",
+                    movie_id,
+                )
+
+                await conn.execute(
+                    "INSERT INTO movie_cards (movie_id, card_id, position) VALUES ($1, $2, $3)",
+                    movie_id,
+                    card_id,
+                    pos,
+                )
+
+                created.append({"card_id": card_id, "value": value, "position": pos})
+
+    return {"cards_created": len(created), "cards": created}

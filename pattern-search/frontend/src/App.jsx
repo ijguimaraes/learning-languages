@@ -3,6 +3,7 @@ import FileUpload from './components/FileUpload'
 import PatternInput from './components/PatternInput'
 import SentenceList from './components/SentenceList'
 import ResultsTable from './components/ResultsTable'
+import SavedPatterns from './components/SavedPatterns'
 
 export default function App() {
   const [file, setFile] = useState(null)
@@ -15,6 +16,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [movies, setMovies] = useState([])
   const [movieId, setMovieId] = useState('')
+  const [patterns, setPatterns] = useState([])
 
   useEffect(() => {
     fetch('/movies')
@@ -24,7 +26,20 @@ export default function App() {
         if (data.movies.length > 0) setMovieId(data.movies[0].id)
       })
       .catch(() => {})
+    loadPatterns()
   }, [])
+
+  function loadPatterns() {
+    fetch('/patterns')
+      .then((r) => r.json())
+      .then((data) => setPatterns(data.patterns))
+      .catch(() => {})
+  }
+
+  function getSelectedMovieLanguage() {
+    const movie = movies.find((m) => m.id === movieId)
+    return movie?.language || 'en'
+  }
 
   async function handleFile(selectedFile) {
     setFile(selectedFile)
@@ -74,6 +89,37 @@ export default function App() {
     }
   }
 
+  async function handleSavePattern() {
+    if (!pattern.trim()) return
+    try {
+      const res = await fetch('/patterns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pattern: pattern.trim(),
+          mode,
+          language: getSelectedMovieLanguage(),
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.detail || 'Failed to save pattern')
+      }
+      loadPatterns()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
+  async function handleDeletePattern(id) {
+    try {
+      await fetch(`/patterns/${id}`, { method: 'DELETE' })
+      loadPatterns()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
       <h1>Pattern Search</h1>
@@ -82,17 +128,33 @@ export default function App() {
       {sentences && (
         <>
           <SentenceList sentences={sentences} />
-          <PatternInput value={pattern} onChange={setPattern} mode={mode} onModeChange={setMode} />
-          <button
-            onClick={handleSearch}
-            disabled={!pattern.trim() || loading}
-            style={{ marginTop: 12, padding: '8px 20px' }}
-          >
-            {loading ? 'Searching…' : 'Search'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <PatternInput value={pattern} onChange={setPattern} mode={mode} onModeChange={setMode} />
+            <button
+              onClick={handleSearch}
+              disabled={!pattern.trim() || loading}
+              style={{ padding: '8px 20px' }}
+            >
+              {loading ? 'Searching…' : 'Search'}
+            </button>
+            <button
+              onClick={handleSavePattern}
+              disabled={!pattern.trim() || !movieId}
+              style={{ padding: '8px 20px' }}
+            >
+              Save Pattern
+            </button>
+          </div>
           {results && (
             <ResultsTable results={results} movies={movies} movieId={movieId} onMovieChange={setMovieId} />
           )}
+          <SavedPatterns
+            patterns={patterns}
+            onDelete={handleDeletePattern}
+            onRefresh={loadPatterns}
+            file={file}
+            movieId={movieId}
+          />
         </>
       )}
     </main>
