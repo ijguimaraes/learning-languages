@@ -77,7 +77,7 @@ export default function ResultsTable({ results, movies, movieId, onMovieChange }
                     <span style={{ color: 'green' }}>Position {added[i]}</span>
                   ) : (
                     <button
-                      onClick={() => handleAdd(i, m.sentence)}
+                      onClick={() => handleAdd(i, m.tokens.join(' '))}
                       disabled={!movieId || adding[i]}
                     >
                       {adding[i] ? '...' : 'Add as Card'}
