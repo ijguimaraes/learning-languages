@@ -37,6 +37,15 @@ async def lifespan(app: FastAPI):
             UNIQUE(pattern, mode, language)
         )
     """)
+    await db_pool.execute("""
+        CREATE TABLE IF NOT EXISTS analyzed_sentences (
+            id             VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+            movie_id       VARCHAR(64) NOT NULL REFERENCES movies(id),
+            sentence_index INT NOT NULL,
+            created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(movie_id, sentence_index)
+        )
+    """)
     minio = get_minio_client()
     ensure_bucket(minio)
     yield
@@ -167,6 +176,40 @@ async def parse_movie_subtitle(movie_id: str):
 
     parsed = _parse_sentences(content)
     return {"total_sentences": len(parsed), "sentences": parsed}
+
+
+# --- Analyzed sentences ---
+
+
+@app.get("/movies/{movie_id}/sentences/analyzed")
+async def list_analyzed_sentences(movie_id: str):
+    rows = await db_pool.fetch(
+        "SELECT sentence_index FROM analyzed_sentences WHERE movie_id = $1",
+        movie_id,
+    )
+    return {"indexes": [r["sentence_index"] for r in rows]}
+
+
+@app.post("/movies/{movie_id}/sentences/{sentence_index}/analyzed")
+async def mark_sentence_analyzed(movie_id: str, sentence_index: int):
+    await db_pool.execute(
+        """INSERT INTO analyzed_sentences (movie_id, sentence_index)
+           VALUES ($1, $2)
+           ON CONFLICT (movie_id, sentence_index) DO NOTHING""",
+        movie_id,
+        sentence_index,
+    )
+    return {"ok": True}
+
+
+@app.delete("/movies/{movie_id}/sentences/{sentence_index}/analyzed")
+async def unmark_sentence_analyzed(movie_id: str, sentence_index: int):
+    await db_pool.execute(
+        "DELETE FROM analyzed_sentences WHERE movie_id = $1 AND sentence_index = $2",
+        movie_id,
+        sentence_index,
+    )
+    return {"ok": True}
 
 
 @app.post("/movies/{movie_id}/search")

@@ -18,6 +18,8 @@ export default function PatternSearch() {
   const [movies, setMovies] = useState([])
   const [selectedMovieId, setSelectedMovieId] = useState(movieId)
   const [patterns, setPatterns] = useState([])
+  const [analyzedIndexes, setAnalyzedIndexes] = useState(new Set())
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     fetch('/movies')
@@ -30,6 +32,7 @@ export default function PatternSearch() {
       .catch(() => {})
     loadPatterns()
     loadSubtitle()
+    loadAnalyzed()
   }, [movieId])
 
   function loadPatterns() {
@@ -37,6 +40,25 @@ export default function PatternSearch() {
       .then((r) => r.json())
       .then((data) => setPatterns(data.patterns))
       .catch(() => {})
+  }
+
+  function loadAnalyzed() {
+    fetch(`/movies/${movieId}/sentences/analyzed`)
+      .then((r) => r.json())
+      .then((data) => setAnalyzedIndexes(new Set(data.indexes)))
+      .catch(() => {})
+  }
+
+  async function handleToggleAnalyzed(index) {
+    const isAnalyzed = analyzedIndexes.has(index)
+    const method = isAnalyzed ? 'DELETE' : 'POST'
+    await fetch(`/movies/${movieId}/sentences/${index}/analyzed`, { method })
+    setAnalyzedIndexes((prev) => {
+      const next = new Set(prev)
+      if (isAnalyzed) next.delete(index)
+      else next.add(index)
+      return next
+    })
   }
 
   async function loadSubtitle() {
@@ -124,7 +146,20 @@ export default function PatternSearch() {
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {sentences && (
         <>
-          <SentenceList sentences={sentences} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              checked={showAll}
+              onChange={(e) => setShowAll(e.target.checked)}
+            />
+            Show all sentences
+          </label>
+          <SentenceList
+            sentences={sentences}
+            analyzedIndexes={analyzedIndexes}
+            onToggleAnalyzed={handleToggleAnalyzed}
+            showAll={showAll}
+          />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <PatternInput value={pattern} onChange={setPattern} mode={mode} onModeChange={setMode} />
             <button
