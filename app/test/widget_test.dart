@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +9,7 @@ import 'package:app/screens/movie_list/movie_list_screen.dart';
 import 'package:app/screens/movie_detail/movie_detail_screen.dart';
 import 'package:app/screens/practice/practice_screen.dart';
 
+import 'helpers/fake_audio_player.dart';
 import 'helpers/mock_http_client.dart';
 import 'helpers/mock_responses.dart';
 
@@ -159,7 +162,8 @@ void main() {
   });
 
   group('PracticeScreen', () {
-    testWidgets('exibe card com instrução e opções', (tester) async {
+    testWidgets('exibe card com instrução mas opções ficam ocultas antes do áudio terminar', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
       final client = createMockClient({
         'GET /movies/f1a2b3c4/practice/next': (_) async =>
             jsonResponse(practiceNextResponse),
@@ -167,20 +171,137 @@ void main() {
       final apiClient = buildApiClient(client);
 
       await tester.pumpWidget(buildTestApp(
-        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4'),
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
       ));
       await tester.pumpAndSettle();
 
       expect(find.text('Prática'), findsOneWidget);
       expect(find.text('Ouça o trecho e selecione a tradução correta.'), findsOneWidget);
-      expect(find.text('Ouvir áudio'), findsOneWidget);
+      expect(find.text('Você acha que o ar que respira é real?'), findsNothing);
+      expect(find.text('Infelizmente, ninguém pode ser informado sobre o que é Matrix.'), findsNothing);
+      expect(find.text('Você tomou a pílula errada.'), findsNothing);
+      expect(find.text('Eu sei que você está aqui, Neo.'), findsNothing);
+    });
+
+    testWidgets('áudio é reproduzido automaticamente ao carregar card', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
+      final client = createMockClient({
+        'GET /movies/f1a2b3c4/practice/next': (_) async =>
+            jsonResponse(practiceNextResponse),
+      });
+      final apiClient = buildApiClient(client);
+
+      await tester.pumpWidget(buildTestApp(
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(fakePlayer.playCount, 1);
+      expect(fakePlayer.lastPlayedUrl, 'http://localhost:8080/v1/audio/output.mp3');
+    });
+
+    testWidgets('opções aparecem após o áudio terminar', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
+      final client = createMockClient({
+        'GET /movies/f1a2b3c4/practice/next': (_) async =>
+            jsonResponse(practiceNextResponse),
+      });
+      final apiClient = buildApiClient(client);
+
+      await tester.pumpWidget(buildTestApp(
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
+      ));
+      await tester.pumpAndSettle();
+
+      // Opções ocultas enquanto áudio toca
+      expect(find.text('Você acha que o ar que respira é real?'), findsNothing);
+
+      // Simula fim do áudio
+      fakePlayer.simulateAudioEnd();
+      await tester.pumpAndSettle();
+
+      // Opções visíveis após áudio terminar
       expect(find.text('Você acha que o ar que respira é real?'), findsOneWidget);
       expect(find.text('Infelizmente, ninguém pode ser informado sobre o que é Matrix.'), findsOneWidget);
       expect(find.text('Você tomou a pílula errada.'), findsOneWidget);
       expect(find.text('Eu sei que você está aqui, Neo.'), findsOneWidget);
     });
 
+    testWidgets('opções ficam ocultas novamente ao carregar próximo card', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
+      final client = createMockClient({
+        'GET /movies/f1a2b3c4/practice/next': (_) async =>
+            jsonResponse(practiceNextResponse),
+        'POST /movies/f1a2b3c4/practice/cards/card_7h8i9j0k/review': (_) async =>
+            jsonResponse(reviewCorrectResponse),
+      });
+      final apiClient = buildApiClient(client);
+
+      await tester.pumpWidget(buildTestApp(
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
+      ));
+      await tester.pumpAndSettle();
+
+      fakePlayer.simulateAudioEnd();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(
+        'Infelizmente, ninguém pode ser informado sobre o que é Matrix.',
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Correto!'), findsOneWidget);
+
+      await tester.tap(find.text('Próximo card'));
+      await tester.pumpAndSettle();
+
+      // Card recarregado, opções ocultas novamente
+      expect(find.text('Ouça o trecho e selecione a tradução correta.'), findsOneWidget);
+      expect(find.text('Você acha que o ar que respira é real?'), findsNothing);
+    });
+
+    testWidgets('opções aparecem em ordem aleatória', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
+      final seededRandom = Random(42);
+      final client = createMockClient({
+        'GET /movies/f1a2b3c4/practice/next': (_) async =>
+            jsonResponse(practiceNextResponse),
+      });
+      final apiClient = buildApiClient(client);
+
+      await tester.pumpWidget(buildTestApp(
+        PracticeScreen(
+          apiClient: apiClient,
+          movieId: 'f1a2b3c4',
+          audioPlayer: fakePlayer,
+          random: seededRandom,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      fakePlayer.simulateAudioEnd();
+      await tester.pumpAndSettle();
+
+      // Com Random(42), a ordem embaralhada é: opt_b, opt_c, opt_a, opt_d
+      final buttons = find.byType(OutlinedButton);
+      expect(buttons, findsNWidgets(4));
+
+      // Verifica que a ordem é diferente da original (opt_a, opt_b, opt_c, opt_d)
+      final buttonTexts = tester.widgetList<OutlinedButton>(buttons).map((btn) {
+        final text = btn.child as Text;
+        return text.data;
+      }).toList();
+
+      expect(buttonTexts, [
+        'Infelizmente, ninguém pode ser informado sobre o que é Matrix.',
+        'Você tomou a pílula errada.',
+        'Você acha que o ar que respira é real?',
+        'Eu sei que você está aqui, Neo.',
+      ]);
+    });
+
     testWidgets('exibe estado vazio quando nenhum card disponível', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
       final client = createMockClient({
         'GET /movies/d5e6f7g8/practice/next': (_) async =>
             jsonResponse(practiceNextEmptyResponse),
@@ -188,7 +309,7 @@ void main() {
       final apiClient = buildApiClient(client);
 
       await tester.pumpWidget(buildTestApp(
-        PracticeScreen(apiClient: apiClient, movieId: 'd5e6f7g8'),
+        PracticeScreen(apiClient: apiClient, movieId: 'd5e6f7g8', audioPlayer: fakePlayer),
       ));
       await tester.pumpAndSettle();
 
@@ -200,6 +321,7 @@ void main() {
     });
 
     testWidgets('exibe resultado correto após selecionar opção', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
       final client = createMockClient({
         'GET /movies/f1a2b3c4/practice/next': (_) async =>
             jsonResponse(practiceNextResponse),
@@ -209,8 +331,11 @@ void main() {
       final apiClient = buildApiClient(client);
 
       await tester.pumpWidget(buildTestApp(
-        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4'),
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
       ));
+      await tester.pumpAndSettle();
+
+      fakePlayer.simulateAudioEnd();
       await tester.pumpAndSettle();
 
       await tester.tap(find.text(
@@ -227,6 +352,7 @@ void main() {
     });
 
     testWidgets('exibe resultado incorreto após selecionar opção errada', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
       final client = createMockClient({
         'GET /movies/f1a2b3c4/practice/next': (_) async =>
             jsonResponse(practiceNextResponse),
@@ -236,8 +362,11 @@ void main() {
       final apiClient = buildApiClient(client);
 
       await tester.pumpWidget(buildTestApp(
-        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4'),
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
       ));
+      await tester.pumpAndSettle();
+
+      fakePlayer.simulateAudioEnd();
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Você tomou a pílula errada.'));
@@ -253,34 +382,8 @@ void main() {
       expect(find.text('5'), findsOneWidget);
     });
 
-    testWidgets('botão Próximo card carrega novo card', (tester) async {
-      final client = createMockClient({
-        'GET /movies/f1a2b3c4/practice/next': (_) async =>
-            jsonResponse(practiceNextResponse),
-        'POST /movies/f1a2b3c4/practice/cards/card_7h8i9j0k/review': (_) async =>
-            jsonResponse(reviewCorrectResponse),
-      });
-      final apiClient = buildApiClient(client);
-
-      await tester.pumpWidget(buildTestApp(
-        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4'),
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text(
-        'Infelizmente, ninguém pode ser informado sobre o que é Matrix.',
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Correto!'), findsOneWidget);
-
-      await tester.tap(find.text('Próximo card'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Ouça o trecho e selecione a tradução correta.'), findsOneWidget);
-    });
-
     testWidgets('exibe erro quando API falha na prática', (tester) async {
+      final fakePlayer = FakeAudioPlayer();
       final client = createMockClient({
         'GET /movies/f1a2b3c4/practice/next': (_) async {
           throw Exception('Connection refused');
@@ -289,7 +392,7 @@ void main() {
       final apiClient = buildApiClient(client);
 
       await tester.pumpWidget(buildTestApp(
-        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4'),
+        PracticeScreen(apiClient: apiClient, movieId: 'f1a2b3c4', audioPlayer: fakePlayer),
       ));
       await tester.pumpAndSettle();
 

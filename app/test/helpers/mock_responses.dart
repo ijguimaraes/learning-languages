@@ -59,6 +59,7 @@ const practiceNextResponse = '''
     "id": "card_7h8i9j0k",
     "movie_id": "f1a2b3c4",
     "audio_url": "http://localhost:8080/v1/audio/output.mp3",
+    "value": "Do you think that's air you're breathing now?",
     "instruction": "Ouça o trecho e selecione a tradução correta.",
     "options": [
       { "id": "opt_a", "value": "Você acha que o ar que respira é real?" },

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
@@ -15,11 +17,15 @@ enum _PracticeState { loading, card, empty, submitting, reviewed, error }
 class PracticeScreen extends StatefulWidget {
   final ApiClient apiClient;
   final String movieId;
+  final AudioPlayer? audioPlayer;
+  final Random? random;
 
   const PracticeScreen({
     super.key,
     required this.apiClient,
     required this.movieId,
+    this.audioPlayer,
+    this.random,
   });
 
   @override
@@ -33,18 +39,28 @@ class _PracticeScreenState extends State<PracticeScreen> {
   ReviewResponse? _reviewResult;
   String _errorMessage = '';
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  late final AudioPlayer _audioPlayer;
+  late final Random _random;
   bool _isPlaying = false;
+  bool _showOptions = false;
   DateTime? _audioEndedAt;
+  List<Option> _shuffledOptions = [];
 
   @override
   void initState() {
     super.initState();
+    _audioPlayer = widget.audioPlayer ?? AudioPlayer();
+    _random = widget.random ?? Random();
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
         final playing = state == PlayerState.playing;
         if (!playing && _isPlaying) {
           _audioEndedAt = DateTime.now();
+          setState(() {
+            _isPlaying = false;
+            _showOptions = true;
+          });
+          return;
         }
         setState(() => _isPlaying = playing);
       }
@@ -79,12 +95,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
       setState(() {
         if (response.card != null) {
           _card = response.card;
+          _shuffledOptions = List.of(response.card!.options)..shuffle(_random);
+          _showOptions = false;
           _state = _PracticeState.card;
         } else {
           _emptyResponse = response;
           _state = _PracticeState.empty;
         }
       });
+      if (_state == _PracticeState.card) {
+        _playAudio();
+      }
     } on ApiException catch (e) {
       debugPrint('[PracticeScreen] ApiException: $e');
       setState(() {
@@ -199,23 +220,25 @@ class _PracticeScreenState extends State<PracticeScreen> {
               onTap: _playAudio,
             ),
           ),
-          const SizedBox(height: 24),
-          ...card.options.map(
-            (option) => Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => _submitAnswer(option.id),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.centerLeft,
+          if (_showOptions) ...[
+            const SizedBox(height: 24),
+            ..._shuffledOptions.map(
+              (option) => Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _submitAnswer(option.id),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    child: Text(option.value),
                   ),
-                  child: Text(option.value),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
