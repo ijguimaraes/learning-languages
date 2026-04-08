@@ -159,6 +159,7 @@ export default function PatternSearch() {
             analyzedIndexes={analyzedIndexes}
             onToggleAnalyzed={handleToggleAnalyzed}
             showAll={showAll}
+            patterns={patterns}
           />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <PatternInput value={pattern} onChange={setPattern} mode={mode} onModeChange={setMode} />
