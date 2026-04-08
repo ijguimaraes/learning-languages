@@ -4,3 +4,4 @@ spacy>=3.7
 srt>=3.5
 python-multipart>=0.0.9
 asyncpg>=0.29
+minio>=7.2

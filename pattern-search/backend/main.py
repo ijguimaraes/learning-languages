@@ -4,14 +4,17 @@ from contextlib import asynccontextmanager
 import asyncpg
 from fastapi import FastAPI, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 import spacy
 
 from srt_parser import parse_srt_text
 from dep_search import load_nlp, search
+from minio_client import get_minio_client, ensure_bucket, upload_subtitle, download_subtitle
 
 nlp: spacy.Language | None = None
 db_pool: asyncpg.Pool | None = None
+minio = None
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -21,7 +24,7 @@ DATABASE_URL = os.getenv(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global nlp, db_pool
+    global nlp, db_pool, minio
     nlp = load_nlp("en_core_web_sm")
     db_pool = await asyncpg.create_pool(DATABASE_URL)
     await db_pool.execute("""
@@ -33,6 +36,8 @@ async def lifespan(app: FastAPI):
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
+    minio = get_minio_client()
+    ensure_bucket(minio)
     yield
     await db_pool.close()
 
@@ -47,11 +52,7 @@ app.add_middleware(
 )
 
 
-async def _decode_srt(file: UploadFile) -> str:
-    if not file.filename or not file.filename.endswith(".srt"):
-        raise HTTPException(status_code=400, detail="Only .srt files are accepted")
-
-    raw_bytes = await file.read()
+def _decode_bytes(raw_bytes: bytes) -> str:
     for encoding in ("utf-8-sig", "utf-8", "latin-1"):
         try:
             return raw_bytes.decode(encoding)
@@ -60,12 +61,17 @@ async def _decode_srt(file: UploadFile) -> str:
     raise HTTPException(status_code=400, detail="Could not decode file")
 
 
-@app.post("/parse")
-async def parse_srt(file: UploadFile):
-    content = await _decode_srt(file)
+async def _decode_srt(file: UploadFile) -> str:
+    if not file.filename or not file.filename.endswith(".srt"):
+        raise HTTPException(status_code=400, detail="Only .srt files are accepted")
+    raw_bytes = await file.read()
+    return _decode_bytes(raw_bytes)
+
+
+def _parse_sentences(content: str):
     sentences = parse_srt_text(content)
     docs = list(nlp.pipe(sentences))
-    parsed = [
+    return [
         {
             "text": sentence,
             "tokens": [
@@ -75,7 +81,142 @@ async def parse_srt(file: UploadFile):
         }
         for sentence, doc in zip(sentences, docs)
     ]
-    return {"total_sentences": len(sentences), "sentences": parsed}
+
+
+# --- Movies ---
+
+
+@app.get("/movies")
+async def list_movies():
+    rows = await db_pool.fetch(
+        "SELECT id, title, original_language, genre, release_date, rating FROM movies ORDER BY title"
+    )
+    return {
+        "movies": [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "language": r["original_language"],
+                "genre": r["genre"],
+                "release_date": str(r["release_date"]) if r["release_date"] else None,
+                "rating": float(r["rating"]) if r["rating"] else None,
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.post("/movies")
+async def create_movie(
+    title: str = Form(...),
+    original_language: str = Form(...),
+    genre: str = Form(None),
+    release_date: str = Form(None),
+    rating: float = Form(None),
+    file: UploadFile = None,
+):
+    row = await db_pool.fetchrow(
+        """INSERT INTO movies (title, original_language, genre, release_date, rating)
+           VALUES ($1, $2, $3, $4::date, $5)
+           RETURNING id""",
+        title,
+        original_language,
+        genre,
+        release_date,
+        rating,
+    )
+    movie_id = row["id"]
+
+    if file and file.filename and file.filename.endswith(".srt"):
+        raw_bytes = await file.read()
+        upload_subtitle(minio, movie_id, raw_bytes)
+
+    return {"id": movie_id, "title": title, "language": original_language}
+
+
+@app.get("/movies/{movie_id}/subtitle")
+async def get_subtitle(movie_id: str):
+    movie = await db_pool.fetchrow("SELECT id FROM movies WHERE id = $1", movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    try:
+        raw_bytes = download_subtitle(minio, movie_id)
+        content = _decode_bytes(raw_bytes)
+        return PlainTextResponse(content)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+
+
+@app.get("/movies/{movie_id}/parse")
+async def parse_movie_subtitle(movie_id: str):
+    movie = await db_pool.fetchrow("SELECT id FROM movies WHERE id = $1", movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    try:
+        raw_bytes = download_subtitle(minio, movie_id)
+        content = _decode_bytes(raw_bytes)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+
+    parsed = _parse_sentences(content)
+    return {"total_sentences": len(parsed), "sentences": parsed}
+
+
+@app.post("/movies/{movie_id}/search")
+async def search_movie_subtitle(
+    movie_id: str,
+    pattern: str = Form(...),
+    mode: str = Form("dep"),
+):
+    movie = await db_pool.fetchrow("SELECT id FROM movies WHERE id = $1", movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    if mode not in ("dep", "pos"):
+        raise HTTPException(status_code=400, detail="Mode must be 'dep' or 'pos'")
+
+    pattern_labels = pattern.strip().split()
+    if not pattern_labels:
+        raise HTTPException(status_code=400, detail="Pattern must not be empty")
+
+    try:
+        raw_bytes = download_subtitle(minio, movie_id)
+        content = _decode_bytes(raw_bytes)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+
+    sentences = parse_srt_text(content)
+    matches = search(nlp, sentences, pattern_labels, mode=mode)
+
+    return {
+        "pattern": pattern_labels,
+        "mode": mode,
+        "total_sentences": len(sentences),
+        "match_count": len(matches),
+        "matches": [
+            {
+                "sentence": m.sentence,
+                "tokens": m.tokens,
+                "labels": m.labels,
+                "start_index": m.start_index,
+                "sentence_tokens": [
+                    {"text": t.text, "dep": t.dep, "pos": t.pos}
+                    for t in m.sentence_tokens
+                ],
+            }
+            for m in matches
+        ],
+    }
+
+
+# --- Legacy endpoints (file upload based) ---
+
+
+@app.post("/parse")
+async def parse_srt(file: UploadFile):
+    content = await _decode_srt(file)
+    parsed = _parse_sentences(content)
+    return {"total_sentences": len(parsed), "sentences": parsed}
 
 
 @app.post("/search")
@@ -117,17 +258,7 @@ async def dep_search(
     }
 
 
-@app.get("/movies")
-async def list_movies():
-    rows = await db_pool.fetch(
-        "SELECT id, title, original_language FROM movies ORDER BY title"
-    )
-    return {
-        "movies": [
-            {"id": r["id"], "title": r["title"], "language": r["original_language"]}
-            for r in rows
-        ]
-    }
+# --- Cards ---
 
 
 class CreateCardRequest(BaseModel):
@@ -218,15 +349,21 @@ async def delete_pattern(pattern_id: str):
 
 @app.post("/patterns/run")
 async def run_patterns(
-    file: UploadFile,
     movie_id: str = Form(...),
 ):
-    content = await _decode_srt(file)
+    movie = await db_pool.fetchrow("SELECT id FROM movies WHERE id = $1", movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    try:
+        raw_bytes = download_subtitle(minio, movie_id)
+        content = _decode_bytes(raw_bytes)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+
     sentences = parse_srt_text(content)
 
-    rows = await db_pool.fetch(
-        "SELECT pattern, mode FROM search_patterns"
-    )
+    rows = await db_pool.fetch("SELECT pattern, mode FROM search_patterns")
     if not rows:
         return {"cards_created": 0, "cards": []}
 
@@ -239,18 +376,11 @@ async def run_patterns(
             value = " ".join(m.tokens)
             all_matches.append(value)
 
-    # Deduplicate
     unique_values = list(dict.fromkeys(all_matches))
 
     created = []
     async with db_pool.acquire() as conn:
         async with conn.transaction():
-            movie = await conn.fetchrow(
-                "SELECT id FROM movies WHERE id = $1", movie_id
-            )
-            if not movie:
-                raise HTTPException(status_code=404, detail="Movie not found")
-
             for value in unique_values:
                 card = await conn.fetchrow(
                     "INSERT INTO cards (value) VALUES ($1) RETURNING id",

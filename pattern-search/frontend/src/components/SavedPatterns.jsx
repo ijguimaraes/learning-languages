@@ -1,16 +1,15 @@
 import { useState } from 'react'
 
-export default function SavedPatterns({ patterns, onDelete, onRefresh, file, movieId }) {
+export default function SavedPatterns({ patterns, onDelete, onRefresh, movieId }) {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState(null)
 
   async function handleRunAll() {
-    if (!file || !movieId) return
+    if (!movieId) return
     setRunning(true)
     setResult(null)
     try {
       const body = new FormData()
-      body.append('file', file)
       body.append('movie_id', movieId)
       const res = await fetch('/patterns/run', { method: 'POST', body })
       if (!res.ok) {
@@ -55,7 +54,7 @@ export default function SavedPatterns({ patterns, onDelete, onRefresh, file, mov
       </table>
       <button
         onClick={handleRunAll}
-        disabled={!file || !movieId || running}
+        disabled={!movieId || running}
         style={{ padding: '8px 20px' }}
       >
         {running ? 'Running…' : 'Run All'}

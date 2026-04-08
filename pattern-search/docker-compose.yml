@@ -5,6 +5,9 @@ services:
       - "8001:8000"
     environment:
       DATABASE_URL: postgresql://movielingo:movielingo_dev@host.docker.internal:5430/movielingo
+      MINIO_ENDPOINT: host.docker.internal:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
