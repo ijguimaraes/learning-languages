@@ -1,5 +1,5 @@
-function getMatchedIndexes(tokens, patterns) {
-  const matched = new Set()
+function getMatchedCounts(tokens, patterns) {
+  const counts = new Map()
   for (const { pattern, mode } of patterns) {
     const parts = pattern.trim().split(/\s+/)
     const labels = parts.filter((l) => !l.startsWith('~'))
@@ -11,11 +11,19 @@ function getMatchedIndexes(tokens, patterns) {
         if (negations.length && i + labels.length < tokens.length) {
           if (negations.includes(tokens[i + labels.length][attr])) continue
         }
-        for (let k = i; k < i + labels.length; k++) matched.add(k)
+        for (let k = i; k < i + labels.length; k++) {
+          counts.set(k, (counts.get(k) || 0) + 1)
+        }
       }
     }
   }
-  return matched
+  return counts
+}
+
+function heatColor(count, maxCount) {
+  if (!count) return 'transparent'
+  const opacity = 0.15 + 0.55 * ((count - 1) / Math.max(maxCount - 1, 1))
+  return `rgba(40, 167, 69, ${opacity.toFixed(2)})`
 }
 
 export default function SentenceList({ sentences, analyzedIndexes, onToggleAnalyzed, showAll, patterns }) {
@@ -33,7 +41,8 @@ export default function SentenceList({ sentences, analyzedIndexes, onToggleAnaly
         {filtered.map((s) => {
           const i = sentences.indexOf(s)
           const analyzed = analyzedIndexes.has(i)
-          const matched = patterns.length > 0 ? getMatchedIndexes(s.tokens, patterns) : new Set()
+          const counts = patterns.length > 0 ? getMatchedCounts(s.tokens, patterns) : new Map()
+          const maxCount = counts.size > 0 ? Math.max(...counts.values()) : 0
           return (
             <div key={i} style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #eee', opacity: analyzed ? 0.5 : 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -46,22 +55,25 @@ export default function SentenceList({ sentences, analyzedIndexes, onToggleAnaly
                 <strong>{i + 1}.</strong> {s.text}
               </div>
               <div style={{ display: 'flex', gap: 12, marginTop: 4, flexWrap: 'wrap', marginLeft: 28 }}>
-                {s.tokens.map((t, j) => (
+                {s.tokens.map((t, j) => {
+                  const count = counts.get(j) || 0
+                  return (
                   <span
                     key={j}
                     style={{
                       textAlign: 'center',
                       fontSize: 13,
-                      background: matched.has(j) ? '#d4edda' : 'transparent',
-                      borderRadius: matched.has(j) ? 4 : 0,
-                      padding: matched.has(j) ? '2px 4px' : 0,
+                      background: heatColor(count, maxCount),
+                      borderRadius: count ? 4 : 0,
+                      padding: count ? '2px 4px' : 0,
                     }}
                   >
                     <div>{t.text}</div>
                     <div style={{ color: '#666', fontSize: 11 }}>{t.dep}</div>
                     <div style={{ color: '#999', fontSize: 11 }}>{t.pos}</div>
                   </span>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )
