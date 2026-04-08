@@ -1,0 +1,16 @@
+services:
+  pattern-search-backend:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql://movielingo:movielingo_dev@host.docker.internal:5430/movielingo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  pattern-search-frontend:
+    build: ./frontend
+    ports:
+      - "5174:80"
+    depends_on:
+      - pattern-search-backend
