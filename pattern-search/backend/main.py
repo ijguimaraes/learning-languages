@@ -33,7 +33,8 @@ async def lifespan(app: FastAPI):
             pattern    TEXT NOT NULL,
             mode       VARCHAR(5) NOT NULL DEFAULT 'dep',
             language   VARCHAR(5) NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(pattern, mode, language)
         )
     """)
     minio = get_minio_client()
@@ -115,14 +116,20 @@ async def create_movie(
     rating: float = Form(None),
     file: UploadFile = None,
 ):
+    from datetime import date as date_type
+
+    parsed_date = None
+    if release_date:
+        parsed_date = date_type.fromisoformat(release_date)
+
     row = await db_pool.fetchrow(
         """INSERT INTO movies (title, original_language, genre, release_date, rating)
-           VALUES ($1, $2, $3, $4::date, $5)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING id""",
         title,
         original_language,
         genre,
-        release_date,
+        parsed_date,
         rating,
     )
     movie_id = row["id"]

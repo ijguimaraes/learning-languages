@@ -45,4 +45,4 @@ Auth: Bearer token. Standard error envelope: `{ "error": { "code", "message", "d
 Backend implemented with PostgreSQL. Two scheduling algorithms (training window + SM-2) in place. Flutter app sends `response_time_ms` on review submission.
 
 ## GIT
-- A cada planejamento executado faça um commit com a descrição do que foi feito.
+- A cada códificação executada faça um commit com a descrição do que foi feito.
